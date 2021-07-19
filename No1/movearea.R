@@ -4,6 +4,7 @@ library(tidyverse)
 library(showtext)
 showtext_auto()
 library("RColorBrewer")
+library(plotly)
 
 getwd()
 
@@ -82,7 +83,7 @@ year <- 2019
 df |>
   gather(입학시도, 입학자수, 7:24) |>
   filter(연도 == year, 입학시도 != '입학합계', 졸업연도 == '계', 대학시도 != '전국') |>
-  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주')) |>
+  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타')) |>
   group_by(구분, 대학시도, 입학시도) |>
   mutate(pct = 입학자수/합계) |>
   ggplot(aes(x = 대학시도, y = 입학시도, fill = pct)) + 
@@ -99,7 +100,7 @@ df |>
 df |>
   gather(입학시도, 입학자수, 7:24) |>
   filter(연도 == year, 입학시도 != '입학합계', 졸업연도 == '계', 대학시도 != '전국') |>
-  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주')) |>
+  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타')) |>
   group_by(구분, 대학시도, 입학시도) |>
   mutate(pct = 입학자수/합계) |>
   ggplot(aes(x = 대학시도, y = 입학시도, fill = pct)) + 
@@ -116,7 +117,7 @@ df |>
 df |>
   gather(입학시도, 입학자수, 6:24) |> 
   filter(연도 == 2020, 입학시도 != '합계', 졸업연도 == '계', 대학시도 != '전국') |>
-  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주')) |>
+  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타')) |>
   group_by(연도, 구분, 입학시도) |>
   mutate(입학생합계 = sum(입학자수)) |> 
   mutate(pct = 입학자수/입학생합계) |>
@@ -138,7 +139,7 @@ df |>
 df |>
   gather(입학시도, 입학자수, 7:24) |>
   filter(연도 == year, 입학시도 != '입학합계', 졸업연도 != '계', 대학시도 != '전국', 대학시도 == 대학소재지) |>
-  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주')) |>
+  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타')) |>
   group_by(구분, 입학시도) |>
   summarise(입학자수 = sum(입학자수)) |>
   ggplot(aes(x = 입학시도, y = 입학자수)) + 
@@ -150,14 +151,100 @@ df |>
        y = '입학자수') +
   theme_minimal()
 
+########################################################
+## sankey 학생수
 
+기준시도 = '부산'
+학교급 = '전문대학'
+df |>
+  gather(입학시도, 입학자수, 6:24) |> 
+  filter(연도 == 2020, 입학시도 != '합계', 졸업연도 == '계', 대학시도 != '전국') |> 
+  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타')) |> 
+  filter(대학시도 == 기준시도, 구분 == 학교급) |> 
+  mutate(pct = (입학자수/sum(입학자수))*100) |>
+  arrange(구분) -> from
+
+from$입학자수
 
 df |>
   gather(입학시도, 입학자수, 6:24) |> 
-  filter(연도 == 2020, 입학시도 != '합계', 졸업연도 == '계', 대학시도 != '전국') |>
-  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주')) |>
-  group_by(연도, 구분, 입학시도) |>
-  mutate(입학생합계 = sum(입학자수)) |> 
-  mutate(pct = 입학자수/입학생합계) |>
-  ggplot(aes(x = 대학시도, y = 입학자수)) + 
-  geom_bar(stat="identity", fill=alpha("skyblue", 0.7))
+  filter(연도 == 2020, 입학시도 != '합계', 졸업연도 == '계', 대학시도 != '전국') |> 
+  mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타')) |> 
+  filter(입학시도 == 기준시도, 구분 == 학교급) |> 
+  mutate(pct = (입학자수/sum(입학자수))*100) |>
+  arrange(구분) -> to
+
+
+plot_ly(type = 'sankey', 
+        name = 'test',
+        orientation = 'h',
+        domain = list(
+          x =  c(0,100),
+          y =  c(0,100)
+        ),
+        node = list(
+          label = c('서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타', 기준시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'), 
+          pad = 5, 
+          thickness = 30, 
+          valueformat = ".0f",
+          valuesuffix = "%",
+          line = list(color = 'black', width = 0.5)
+        ), 
+        link = list(
+          source = c(0:17, rep(18, 17)),
+          target = c(rep(18, 18), 19:35),
+##          label = c(rep('a', 35)),
+          value = c(from$pct, to$pct)
+        ), 
+        textfont = list(size = 10)
+) %>% layout(
+  title = paste0(기준시도, "지역 ", 학교급, ' 신입생의 전입 및 전출 현황(%)'), 
+  font = list(
+    size = 10
+  ),
+  xaxis = list(showgrid = T, zeroline = T, showticklabels = T,
+               showgrid = T),
+  yaxis = list(showgrid = T, zeroline = T, showticklabels = T,
+               showgrid = T)
+) 
+
+
+%>% add_annotations(
+  x=1,
+  y=5,
+  xref = "x",
+  yref = "y",
+  text = "Column A",
+##  xanchor = 'right',
+  showarrow = F
+)
+
+
+
+library(networkD3)
+library(dplyr)
+
+# A connection data frame is a list of flows with intensity for each flow
+links <- data.frame(
+  source=c("group_A","group_A", "group_B", "group_C", "group_C", "group_E"), 
+  target=c("group_C","group_D", "group_E", "group_F", "group_G", "group_H"), 
+  value=c(2,3, 2, 3, 1, 3)
+)
+
+# From these flows we need to create a node data frame: it lists every entities involved in the flow
+nodes <- data.frame(
+  name=c(as.character(links$source), 
+         as.character(links$target)) %>% unique()
+)
+
+# With networkD3, connection must be provided using id, not using real name like in the links dataframe.. So we need to reformat it.
+links$IDsource <- match(links$source, nodes$name)-1 
+links$IDtarget <- match(links$target, nodes$name)-1
+
+# Make the Network
+p <- sankeyNetwork(Links = links, Nodes = nodes,
+                   Source = "IDsource", Target = "IDtarget",
+                   Value = "value", NodeID = "name", 
+                   sinksRight=FALSE)
+p
+?sankeyNetwork
