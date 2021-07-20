@@ -5,6 +5,9 @@ library(showtext)
 showtext_auto()
 library("RColorBrewer")
 library(plotly)
+library(withr)
+library(processx)
+library(networkD3)
 
 getwd()
 
@@ -154,25 +157,29 @@ df |>
 ########################################################
 ## sankey 학생수
 
-기준시도 = '부산'
+기준시도 = '서울'
 학교급 = '전문대학'
+기준년도 = 2020
+
 df |>
   gather(입학시도, 입학자수, 6:24) |> 
-  filter(연도 == 2020, 입학시도 != '합계', 졸업연도 == '계', 대학시도 != '전국') |> 
+  filter(연도 == 기준년도, 입학시도 != '합계', 졸업연도 == '계', 대학시도 != '전국') |> 
   mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타')) |> 
   filter(대학시도 == 기준시도, 구분 == 학교급) |> 
   mutate(pct = (입학자수/sum(입학자수))*100) |>
   arrange(구분) -> from
 
-from$입학자수
 
 df |>
   gather(입학시도, 입학자수, 6:24) |> 
-  filter(연도 == 2020, 입학시도 != '합계', 졸업연도 == '계', 대학시도 != '전국') |> 
+  filter(연도 == 기준년도, 입학시도 != '합계', 졸업연도 == '계', 대학시도 != '전국') |> 
   mutate(입학시도 = fct_relevel(입학시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타')) |> 
   filter(입학시도 == 기준시도, 구분 == 학교급) |> 
   mutate(pct = (입학자수/sum(입학자수))*100) |>
   arrange(구분) -> to
+
+# paste0(from$입학시도, ' - ', round(from$pct, 1), '%')
+# paste0(to$대학시도, ' - ', round(to$pct, 1), '%')
 
 
 plot_ly(type = 'sankey', 
@@ -183,7 +190,11 @@ plot_ly(type = 'sankey',
           y =  c(0,100)
         ),
         node = list(
-          label = c('서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타', 기준시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'), 
+#          label = c('서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '기타', 기준시도, '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'), 
+          label = c(paste0(from$입학시도, ' - ', round(from$pct, 1), '%'),
+                    기준시도,
+                    paste0(to$대학시도, ' - ', round(to$pct, 1), '%')),
+          color = c(rep('red', 18), 'black', rep('blue', 17)),
           pad = 5, 
           thickness = 30, 
           valueformat = ".0f",
@@ -196,26 +207,33 @@ plot_ly(type = 'sankey',
 ##          label = c(rep('a', 35)),
           value = c(from$pct, to$pct)
         ), 
-        textfont = list(size = 10)
-) %>% layout(
-  title = paste0(기준시도, "지역 ", 학교급, ' 신입생의 전입 및 전출 현황(%)'), 
+        textfont = list(size = 12)
+) %>%
+  layout(autosize = T, margin=list(b = 50, t = 50,  pad = 4)) %>% 
+  layout(
+  title = paste0(기준년도, '년 ' , 기준시도, "지역 ", 학교급, ' 신입생의 전입 및 전출 현황(%)'), 
   font = list(
-    size = 10
+    size = 15
   ),
   xaxis = list(showgrid = T, zeroline = T, showticklabels = T,
                showgrid = T),
   yaxis = list(showgrid = T, zeroline = T, showticklabels = T,
                showgrid = T)
-) 
-
-
-%>% add_annotations(
-  x=1,
-  y=5,
-  xref = "x",
-  yref = "y",
-  text = "Column A",
-##  xanchor = 'right',
+) %>% add_annotations(
+  x= 0.25,
+  y= -0.05,
+  xref = "paper",
+  yref = "paper",
+  text = paste0('각 지역 졸업생의 ', 기준시도, "지역 ", 학교급,' 전입'),
+  xanchor = 'center',
+  showarrow = F
+) %>% add_annotations(
+  x= 0.75,
+  y= -0.05,
+  xref = "paper",
+  yref = "paper",
+  text = paste0(기준시도, " 고교졸업생 중 ", 학교급, '지역별 현황'),
+  xanchor = 'center',
   showarrow = F
 )
 
@@ -248,3 +266,40 @@ p <- sankeyNetwork(Links = links, Nodes = nodes,
                    sinksRight=FALSE)
 p
 ?sankeyNetwork
+
+
+plot_ly() %>%
+  config(
+    toImageButtonOptions = list(
+      format = "eps",
+      filename = "myplot",
+      width = 600,
+      height = 700
+    )
+  )
+orca()
+
+install.packages('rsvg')
+library(rsvg)
+rsvg_pdf('myplot.svg', 'myplot.pdf')
+getwd()
+
+Sys.setenv(PATH = paste0('C:/Users/estnd/AppData/Local/Programs/orca/;', Sys.getenv("PATH")))
+
+
+links <- data.frame(
+  source = c(0:17, rep(18, 17)),
+  target = c(rep(18, 18), 19:35),
+  value = c(from$pct, to$pct)
+)
+
+nodes <- data.frame(
+  name = c(paste0(from$입학시도, ' - ', round(from$pct, 1), '%'),
+           기준시도,
+           paste0(to$대학시도, ' - ', round(to$pct, 1), '%'))
+)
+
+sankeyNetwork(Links = links, Nodes = nodes,
+              Source = "source", Target = "target",
+              Value = "value", NodeID = "name", 
+              sinksRight=FALSE, fontSize = 12, nodeWidth = 20)
